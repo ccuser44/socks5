@@ -1,0 +1,17 @@
+# Change line endings to LF
+*.lua text=auto
+*.lua eol=lf
+*.json text=auto
+*.json eol=lf
+*.md text=auto
+*.md eol=lf
+*.toml text=auto
+*.toml eol=lf
+*.yml text=auto
+*.yml eol=lf
+*.txt text=auto
+*.txt eol=lf
+*.bat text=auto
+*.bat eol=lf
+*.sh text=auto
+*.sh eol=lf

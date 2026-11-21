@@ -1,0 +1,276 @@
+
+base: lua51
+
+lua_versions:
+  - luajit
+
+globals:
+  # LuaJIT global extensions
+  jit:
+    property: read-only
+
+  jit.version:
+    property: read-only
+  jit.version_num:
+    property: read-only
+  jit.os:
+    property: read-only
+  jit.arch:
+    property: read-only
+  jit.status:
+    args:
+      - type: "..."
+  jit.on:
+    args:
+      - type: "..."
+  jit.off:
+    args:
+      - type: "..."
+  jit.flush:
+    args:
+      - required: false
+        type: function
+      - required: false
+        type: number
+  jit.attach:
+    args:
+      - type: function
+      - type: string
+  jit.detach:
+    args:
+      - type: function
+      - type: string
+
+  # BitOp
+  bit:
+    property: read-only
+
+  bit.tobit:
+    args:
+      - type: number
+  bit.tohex:
+    args:
+      - type: number
+      - required: false
+        type: number
+  bit.bnot:
+    args:
+      - type: number
+  bit.band:
+    args:
+      - type: number
+      - required: false
+        type: "..."
+  bit.bor:
+    args:
+      - type: number
+      - required: false
+        type: "..."
+  bit.bxor:
+    args:
+      - type: number
+      - required: false
+        type: "..."
+  bit.lshift:
+    args:
+      - type: number
+      - type: number
+  bit.rshift:
+    args:
+      - type: number
+      - type: number
+  bit.arshift:
+    args:
+      - type: number
+      - type: number
+  bit.rol:
+    args:
+      - type: number
+      - type: number
+  bit.ror:
+    args:
+      - type: number
+      - type: number
+  bit.bswap:
+    args:
+      - type: number
+
+  # FFI
+  ffi:
+    property: read-only
+  ffi.C:
+    property: new-fields
+  ffi.os:
+    property: read-only
+  ffi.arch:
+    property: read-only
+  ffi.NULL:
+    property: read-only
+  ffi.errno:
+    args:
+      - required: false
+        type: number
+  ffi.cdef:
+    args:
+      - type: string
+  ffi.load:
+    args:
+      - type: string
+      - required: false
+        type: bool
+  ffi.new:
+    args:
+      - type: any
+      - required: false
+        type: "..."
+  ffi.typeof:
+    args:
+      - type: any
+      - required: false
+        type: "..."
+  ffi.istype:
+    args:
+      - type: any
+      - type: any
+  ffi.sizeof:
+    args:
+      - type: any
+      - required: false
+        type: any
+  ffi.alignof:
+    args:
+      - type: any
+  ffi.offsetof:
+    args:
+      - type: any
+      - type: string
+  ffi.cast:
+    args:
+      - type: any
+      - type: any
+  ffi.copy:
+    args:
+      - type: any
+      - type: any
+      - required: false
+        type: number
+  ffi.fill:
+    args:
+      - type: any
+      - type: number
+      - required: false
+        type: number
+  ffi.string:
+    args:
+      - type: any
+      - required: false
+        type: number
+  ffi.abi:
+    args:
+      - type: string
+      - required: false
+        type: bool
+  ffi.gc:
+    args:
+      - type: any
+      - required: false
+        type: any
+  ffi.metatype:
+    args:
+      - type: any
+      - type: table
+  ffi.reftype:
+    args:
+      - type: any
+
+  # Lua 5.2 unconditional additions
+  load:
+    args:
+      - type: any
+      - required: false
+        type: string
+      - required: false
+        type: string
+      - required: false
+        type: table
+
+  loadstring:
+    args:
+      - type: string
+      - required: false
+        type: string
+
+  loadfile:
+    args:
+      - type: string
+      - required: false
+        type: string
+      - required: false
+        type: table
+
+  package.searchpath:
+    args:
+      - type: string
+      - type: string
+      - required: false
+        type: string
+      - required: false
+        type: string
+
+  package.searchers:
+    property: read-only
+
+  debug.upvalueid:
+    args:
+      - type: function
+      - type: number
+
+  debug.upvaluejoin:
+    args:
+      - type: function
+      - type: number
+      - type: function
+      - type: number
+
+  debug.getuservalue:
+    args:
+      - type: any
+
+  debug.setuservalue:
+    args:
+      - type: any
+      - type: any
+
+  # Lua 5.3 additions
+  table.move:
+    args:
+      - type: table
+      - type: number
+      - type: number
+      - type: number
+      - required: false
+        type: table
+
+  coroutine.isyieldable:
+    args: []
+
+  # LuaJIT enhanced functions
+  math.log:
+    args:
+      - type: number
+      - required: false
+        type: number
+
+  string.rep:
+    args:
+      - type: string
+      - type: number
+      - required: false
+        type: string
+
+  xpcall:
+    args:
+      - type: function
+      - type: function
+      - required: false
+        type: "..."

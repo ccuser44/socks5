@@ -1,0 +1,44 @@
+[*.lua]
+indent_style = tab
+indent_size = 4
+trim_trailing_whitespace = true
+end_of_line = lf
+
+[*.json]
+indent_style = tab
+indent_size = 4
+trim_trailing_whitespace = true
+end_of_line = lf
+
+[*.toml]
+indent_style = tab
+indent_size = 4
+trim_trailing_whitespace = true
+end_of_line = lf
+
+[*.yml]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = true
+end_of_line = lf
+
+[*.md]
+indent_style = tab
+indent_size = 4
+trim_trailing_whitespace = true
+end_of_line = lf
+
+[*.txt]
+end_of_line = lf
+
+[*.bat]
+indent_style = tab
+indent_size = 4
+trim_trailing_whitespace = true
+end_of_line = lf
+
+[*.sh]
+indent_style = tab
+indent_size = 4
+trim_trailing_whitespace = true
+end_of_line = lf
