@@ -26,6 +26,7 @@ end
 local readSocket, writeSocket, combineInt, ipv6ToInts, connectHandlers, disconnectHandlers
 
 local ENABLE_DEBUGGING = false
+local CONN_TERM = "Connection terminated due to:"
 local MAX_ERRORS = 64
 local DEFAULT_PORT = 1080
 local VERSION_MAP = {
@@ -110,6 +111,14 @@ local function toUint32(x)
 	return x
 end
 
+local function assertCoroutine(reason, status, err)
+	if not status then
+		error(tostring(reason) .. " " .. tostring(err), 2)
+	else
+		return status, err
+	end
+end
+
 combineInt = function(t, size, i, j, inc, base)
 	size = size or 8
 	local n = 0
@@ -149,7 +158,7 @@ end
 
 local function readBuffLen(buff, n)
 	while buff.strlen < n do
-		assert(coroutine.yield(), "Connection terminated for an unknown reason!")
+		assertCoroutine(CONN_TERM, coroutine.yield())
 	end
 
 	local raw = table.concat(buff)
@@ -181,7 +190,7 @@ local function readBuffStr(buff)
 	local checkIdx, foundIdx = findNullStr(buff, 0)
 
 	while not foundIdx do
-		assert(coroutine.yield(), "Connection terminated for an unknown reason!")
+		assertCoroutine(CONN_TERM, coroutine.yield())
 		checkIdx, foundIdx = findNullStr(buff, checkIdx)
 	end
 
@@ -240,7 +249,7 @@ connectHandlers = function(socket, buff)
 			print("client disconnected")
 		end
 
-		coroutine.resume(co, false)
+		coroutine.resume(co, false, "Connection ended")
 		socket:destroy()
 	end)
 
@@ -252,6 +261,7 @@ connectHandlers = function(socket, buff)
 		errors = errors + 1
 
 		if errors > MAX_ERRORS then -- Hande errors gracefully but if it's stuck then
+			coroutine.resume(false, err)
 			socket:destroy()
 		end
 	end)
@@ -261,7 +271,7 @@ connectHandlers = function(socket, buff)
 			print("CLOSE")
 		end
 
-		coroutine.resume(co, false)
+		coroutine.resume(co, false, "Connection closed")
 		socket:destroy()
 	end)
 end
@@ -320,7 +330,7 @@ local function connectSOCKS5(port, ...)
 	connectHandlers(options.socket, options.buff)
 
 	-- // Greeting
-	assert(coroutine.yield(), "Connection terminated for an unknown reason!")
+	assertCoroutine(CONN_TERM, coroutine.yield())
 	writeSocket(options.socket, ">b s1", 0x5, string.char(table.unpack(options.methods or lookupify(DEFAULT_SUPPORTED))))
 	local ver, method = readSocket(options.socket, ">B B", options.buff)
 
