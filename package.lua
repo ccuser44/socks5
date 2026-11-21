@@ -1,6 +1,6 @@
 return {
-	name = "ccuser/socks5",
-	version = "0.0.1",
+	name = "ccuser44/socks5",
+	version = "1.0.0",
 	description = "A full SOCKS5, SOCKS4a and SOCKS4 client and server implementation in luvit.",
 	tags = { "proxy", "proxies", "socks", "socks5", "socks4a", "socks4", "socket" },
 	license = "MIT",
@@ -14,6 +14,6 @@ return {
 		"**.lua",
 		"!**spec.lua",
 		"!test*",
-		"tempinfo/**"
+		"!tempinfo/**"
 	}
 }
