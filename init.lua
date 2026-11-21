@@ -349,7 +349,6 @@ local function connectSOCKS5(port, ...)
 		assert(not options.port or checkPort == options.port, "Server connected to wrong port")
 	end]]
 
-	print("FINISHED")
 	return disconnectHandlers(options.socket)
 end
 
