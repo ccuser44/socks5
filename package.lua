@@ -7,7 +7,6 @@ return {
 	author = { name = "ccuser44", email = "68124053+ccuser44@users.noreply.github.com" },
 	homepage = "https://github.com/ccuser44/socks5",
 	dependencies = {
-		"luvit/secure-socket",
 		"Richy-Z/string-extensions"
 	},
 	files = {

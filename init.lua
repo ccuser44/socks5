@@ -7,7 +7,6 @@ do
 	local success, cjson = pcall(require, "cjson")
 	json = success and cjson or require("json")
 end
-local ssocket = require("secure-socket")
 local strext = require("string-extensions")
 
 pcall(require, "table.new") -- LuaJIT support
@@ -28,6 +27,7 @@ local readSocket, writeSocket, combineInt, ipv6ToInts, connectHandlers, disconne
 local ENABLE_DEBUGGING = false
 local CONN_TERM = "Connection terminated due to:"
 local MAX_ERRORS = 64
+local REGISTERED_HANDLERS = { "connect", "data", "end", "error", "close" }
 local DEFAULT_PORT = 1080
 local VERSION_MAP = {
 	socks5 = 0x5,
@@ -45,7 +45,7 @@ local STATUS_MESSAGES = setmetatable({
 	[0x06] = "TTL expired",
 	[0x07] = "command not supported / protocol error",
 	[0x08] = "address type not supported",
-}, { __index = function() return "Unknown Error" end })
+}, { __index = function(_, k) return "Unknown Error: " .. tostring(k) end })
 local DEFAULT_SUPPORTED = {0x0, --[[0x1,]] 0x2, 0x3, 0x6}
 local METHOD_PREFERENCE = {0x6, 0x3, 0x2, 0x0, 0x1}
 local PASSWORD_METHODS = {0x1, 0x2, 0x3}
@@ -76,8 +76,7 @@ local methods = setmetatable({
 		local mock = table.clone(options)
 		mock.host, mock.port = mock.proxy, mock.proxyPort
 		options.socket = assert(tls.connect(mock), "TLS socket creation failed!")
-		socket = options.socket
-		connectHandlers(socket)
+		connectHandlers(options.socket)
 	end,
 	[0x9] = function(socket, options, buff) -- JSON Parameter Block
 		writeSocket(socket, ">s4", assert(type(options.authparams) == "string" and options.authparams or options.authparams and json.encode(options.authparams), "No JSON parameters specified to client!"))
@@ -277,7 +276,7 @@ connectHandlers = function(socket, buff)
 end
 
 disconnectHandlers = function(socket)
-	for _, v in ipairs({ "connect", "data", "end", "error", "close" }) do
+	for _, v in ipairs(REGISTERED_HANDLERS) do
 		pcall(socket.removeListener, socket, v)
 	end
 
@@ -287,26 +286,27 @@ end
 local function connectSOCKS5(port, ...)
 	local args = table.pack(...)
 	local options = {}
-	local rawIp = nil
+	local rawIp, cmdType = nil, 0x1
 
 	-- future proof
 	if type(port) == "table" then
 		options = port
-		options.host = assert(options.host, "Missing hostname")
 		options.callback = args[1]
-		assert(options.proxy, "Missing proxy")
 	else
 		options.port = port
-		options.host = assert(args[1], "Missing hostname")
-		options.callback = args[2]
-		options.proxy, options.proxyPort = assert(args[3], "Missing "), args[4]
+		options.host, options.callback = args[1], args[2]
+		options.proxy, options.proxyPort = args[3], args[4]
 	end
 
 	do
-		local data = url.parse(options.proxy)
+		local data = url.parse(assert(options.proxy, "Missing proxy!"))
 		options.protocol = data.protocol
-		options.proxyPort = options.proxyPort or data.port or DEFAULT_PORT
-		options.proxy = data.hostname
+		options.proxyPort, options.proxy = options.proxyPort or data.port or DEFAULT_PORT, data.hostname
+		cmdType = options.host:upper() == "UDP" and 0x3 or options.host:upper() == "BIND" and 0x2 or 0x1
+
+		if cmdType ~= 0x1 then
+			options.host = options.proxy
+		end
 
 		if data.auth then
 			local name, pass = string.match(data.auth, "^%s*([^:]+):?(.-)%s*$")
@@ -315,9 +315,9 @@ local function connectSOCKS5(port, ...)
 		end
 	end
 
-	if type(options.host) == "string" then
+	if type(assert(options.host, "Missing host!")) == "string" then
 		local data = url.parse(options.host)
-		options.port, options.hostname = assert(data.port or options.port, "MISSING PORT"), data.host
+		options.port, options.hostname = assert(data.port or options.port, "Missing port!"), data.host
 	else
 		rawIp = options.host
 		options.hostname = tostring(bit.band(bit.rshift(rawIp, 24), 0xFF)) .. "." .. tostring(bit.band(bit.rshift(rawIp, 16), 0xFF)) .. "." .. tostring(bit.band(bit.rshift(rawIp, 8), 0xFF)) .. "." .. tostring(bit.band(rawIp, 0xFF))
@@ -339,13 +339,13 @@ local function connectSOCKS5(port, ...)
 		-- // Handle other SOCKS versions
 	end
 
-	methods[method](options.socket, options, options.buff) -- TODO: Make this support the SSL thing, also add SOCKS4 proxy support
+	methods[method].client(options.socket, options, options.buff) -- TODO: Make this support the SSL thing, also add SOCKS4 proxy support
 
 	-- // Connection request
 	rawIp = rawIp or not string.find(options.hostname, "%a") and combineInt(string.split(options.hostname, "."))
 	local isIpv6 = string.find(options.hostname, ":", 1, true) and string.find(string.sub(options.hostname, 1, select(2, string.find(options.hostname, "^.+:")) - 1), ":", 1, true)
 	local address = rawIp and string.pack(">b L", 0x1, rawIp) or isIpv6 and string.pack(">b LLLL", 0x4, ipv6ToInts(options.hostname)) or string.pack(">b s1", 0x3, options.hostname)
-	writeSocket(options.socket, ">b b b c" .. #address .. " H", 0x5, 0x1--[[CMD]], 0x0, address, options.port)
+	writeSocket(options.socket, ">b b b c" .. #address .. " H", 0x5, cmdType, 0x0, address, options.port)
 
 	-- // Connection response handling
 	local ver, status, rsv, addTyp = readSocket(options.socket, ">bbbb", options.buff)
@@ -354,15 +354,20 @@ local function connectSOCKS5(port, ...)
 	local checkAddr = addTyp == 0x1 and readSocket(options.socket, ">L", options.buff) or addTyp == 0x4 and string.format(string.rep("%x0", 8, ":"), readSocket(options.socket, ">HH HH HH HH")) or addTyp == 0x3 and readSocket(options.socket, ">s1", options.buff)
 	local checkPort = readSocket(options.socket, ">H", options.buff)
 
-	--[[if false then -- Do not verify this because most proxies do not
-		assert(checkAddr == (rawIp or options.hostname), "Server connected to wrong address")
-		assert(not options.port or checkPort == options.port, "Server connected to wrong port")
-	end]]
-
-	return disconnectHandlers(options.socket)
+	return disconnectHandlers(options.socket), checkAddr, checkPort
 end
 
 METHOD_PREFERENCE, DEFAULT_SUPPORTED = lookupify(METHOD_PREFERENCE), lookupify(DEFAULT_SUPPORTED)
+
+for method, v in pairs(methods) do
+	if type(v) == "function" then
+		methods[method] = { client = v, server = v }
+	elseif not v.client then
+		v.client = v.server
+	elseif not v.server then
+		v.server = v.client
+	end
+end
 
 return {
 	connect = connectSOCKS5,
