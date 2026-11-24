@@ -8,7 +8,7 @@ do
 	json = success and cjson or require("json")
 end
 local strext = require("string-extensions")
-local sbuff = require("./sbuff")
+local sbuff = require("sbuff")
 
 pcall(require, "table.new") -- LuaJIT support
 pcall(require, "table.clear") -- LuaJIT support
@@ -59,7 +59,7 @@ local methods = setmetatable({
 		--print(options.name, options.pass)
 		writeSocket(socket, ">b s1 s1", 0x1, tostring(options.name), tostring(options.pass))
 		local ver, success = readSocket(socket, ">b b", buff)
-		assert(ver == 0x1, "Unsupported server auth version")
+		assert(ver == 0x1, "Unsupported server auth version!")
 		assert(success == 0, "Authentification failed!")
 	end,
 	-- IANA methods
@@ -89,7 +89,6 @@ local methods = setmetatable({
 end })
 
 -- TODO: Move this to using completely a callback based state machine! No yielding.
--- ^^^^ Also add support for SOCKS5 servers, TCP/IP lisener binding and UDP binding
 
 local function lookupify(tbl)
 	local tbl2 = {}
@@ -145,7 +144,11 @@ ipv6ToInts = function(ip)
 	return combineInt(ip, 16, 1, 2, 1, 16), combineInt(ip, 16, 3, 4, 1, 16), combineInt(ip, 16, 5, 6, 1, 16), combineInt(ip, 16, 7, 8, 1, 16)
 end
 
-local function connectSOCKS5(port, ...)
+local function createServer(options, callback)
+
+end
+
+local function connect(port, ...)
 	local args = table.pack(...)
 	local options = {}
 	local rawIp, cmdType = nil, 0x1
@@ -164,7 +167,7 @@ local function connectSOCKS5(port, ...)
 		local data = url.parse(assert(options.proxy, "Missing proxy!"))
 		options.protocol = data.protocol
 		options.proxyPort, options.proxy = options.proxyPort or data.port or DEFAULT_PORT, data.hostname
-		cmdType = options.host:upper() == "UDP" and 0x3 or options.host:upper() == "BIND" and 0x2 or 0x1
+		cmdType = options.host:upper() == "UDP" and 0x3 or options.host:upper() == "BIND" and 0x2 or 0x1 -- TODO: Add a UDP binding support wrapper
 
 		if cmdType ~= 0x1 then
 			options.host = options.proxy
@@ -232,5 +235,6 @@ for method, v in pairs(methods) do
 end
 
 return {
-	connect = connectSOCKS5,
+	connect = connect,
+	createServer = createServer,
 }
